@@ -69,18 +69,18 @@ ngx_module_incs=$ngx_addon_dir/src
 
 have=NGX_HTTP_HEADERS . auto/have
 
-if [ $ngx_module_link = DYNAMIC ] ; then
-  ngx_module_type=HTTP
-  ngx_module_name=nchan_module
-  ngx_module_srcs="$_NCHAN_SRCS"
-  . auto/module
-elif [ $ngx_module_link = ADDON ] ; then
-  ngx_module_type=HTTP
-  ngx_module_name=nchan_module
-  ngx_module_srcs="$_NCHAN_SRCS"
-  . auto/module
-else
+#if [ $ngx_module_link = DYNAMIC ] ; then
+#  ngx_module_type=HTTP
+#  ngx_module_name=nchan_module
+#  ngx_module_srcs="$_NCHAN_SRCS"
+#  . auto/module
+#elif [ $ngx_module_link = ADDON ] ; then
+#  ngx_module_type=HTTP
+#  ngx_module_name=nchan_module
+#  ngx_module_srcs="$_NCHAN_SRCS"
+#  . auto/module
+#else
   NGX_ADDON_SRCS="$NGX_ADDON_SRCS $_NCHAN_SRCS"
   CORE_INCS="$CORE_INCS $ngx_module_incs"
   HTTP_MODULES="$HTTP_MODULES nchan_module"
-fi
+#fi
