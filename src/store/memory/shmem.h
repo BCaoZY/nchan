@@ -19,3 +19,5 @@ void              shmtx_unlock(shmem_t *shm);
 ngx_str_t        *shm_copy_immutable_string(shmem_t *shm, ngx_str_t *str);
 void              shm_free_immutable_string(shmem_t *shm, ngx_str_t *str);
 void              shm_verify_immutable_string(shmem_t *shm, ngx_str_t *str);
+
+ngx_int_t shm_init_mutex(ngx_shmtx_t *mutex, ngx_shmtx_sh_t *lock, char *name);

@@ -35,6 +35,10 @@
 
 #endif
 
+static shmem_t         *shm = NULL;
+static shm_data_t      *shdata = NULL;
+static ipc_t            ipc_data;
+static ipc_t           *ipc = NULL;
 
 typedef struct {
   //nchan_store_channel_head_t      unbuffered_dummy_chanhead;
@@ -56,7 +60,7 @@ typedef struct {
 
 ngx_int_t                         memstore_procslot_offset = 0;
 
-static ngx_int_t nchan_memstore_store_msg_ready_to_reap_generic(store_message_t *smsg, uint8_t respect_expire, uint8_t force) {
+static ngx_int_t nchan_memstore_store_msg_ready_to_reap_generic(store_message_t *smsg, uint8_t respect_expire, uint8_t forward_to_orphan_reaper, uint8_t force) {
   if(!force) {
     if(respect_expire && smsg->msg->expires > ngx_time()) {
       //not time yet
@@ -73,18 +77,27 @@ static ngx_int_t nchan_memstore_store_msg_ready_to_reap_generic(store_message_t 
       if(smsg->msg->refcount > 0) {
         ERR("force-reaping msg with refcount %d", smsg->msg->refcount);
       }
+      //TODO: add to orphanmsg reaper, however it will be implemented
+      
       smsg->msg->refcount = MSG_REFCOUNT_INVALID;
     }
     return NGX_OK;
   }
 }
 
+
 static ngx_int_t nchan_memstore_store_msg_ready_to_reap(store_message_t *smsg, uint8_t force) {
-  return nchan_memstore_store_msg_ready_to_reap_generic(smsg, 0, force);
+  return nchan_memstore_store_msg_ready_to_reap_generic(smsg, 0, 1, force);
 }
 
 static ngx_int_t nchan_memstore_store_msg_ready_to_reap_wait_util_expired(store_message_t *smsg, uint8_t force) {
-  return nchan_memstore_store_msg_ready_to_reap_generic(smsg, 1, force);
+  return nchan_memstore_store_msg_ready_to_reap_generic(smsg, 1, 1, force);
+}
+
+static ngx_int_t nchan_memstore_store_orphan_msg_ready_to_reap(store_message_t *smsg, uint8_t force) {
+  ngx_shmtx_lock(&shdata->orphan_msg_mutex);
+  return nchan_memstore_store_msg_ready_to_reap_generic(smsg, 0, 0, force);
+  ngx_shmtx_unlock(&shdata->orphan_msg_mutex);
 }
 
 static ngx_int_t memstore_reap_message( nchan_msg_t *msg );
@@ -222,11 +235,6 @@ static void init_mpt(memstore_data_t *m) {
   m->nobuffer_msg_reaper.max_notready_ratio = 0.10;
   
 }
-
-static shmem_t         *shm = NULL;
-static shm_data_t      *shdata = NULL;
-static ipc_t            ipc_data;
-static ipc_t           *ipc = NULL;
 
 #if FAKESHARD
 
@@ -472,14 +480,23 @@ static ngx_int_t initialize_shm(ngx_shm_zone_t *zone, void *data) {
     shdata->current_active_workers = 0;
     shdata->reloading = 0;
     
+    /*
+     this approach doesn't work, because the master process doesn't have a timer loop
     nchan_reaper_start(&shdata->orphan_msg_reaper, 
                      "orphan message", 
                      offsetof(store_message_t, prev), 
                      offsetof(store_message_t, next), 
-    (ngx_int_t (*)(void *, uint8_t)) nchan_memstore_store_msg_ready_to_reap,
+    (ngx_int_t (*)(void *, uint8_t)) nchan_memstore_store_orphan_msg_ready_to_reap,
          (void (*)(void *)) memstore_reap_store_message,
                      2
     );
+    
+    ngx_event_t   *evt =ngx_pcalloc(ngx_cycle->pool, sizeof(*evt));
+    nchan_init_timer(evt, mehwhatever, mehwhatever);
+    ngx_add_timer(evt, 1000);
+    */
+    
+    assert(shm_init_mutex(&shdata->orphan_msg_mutex, &shdata->orphan_msg_lock, "shared orphaned message reaper") == NGX_OK);
     
     for(i=0; i< NGX_MAX_PROCESSES; i++) {
       shdata->procslot[i]=NCHAN_INVALID_SLOT;
