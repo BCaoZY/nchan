@@ -449,7 +449,7 @@ static ngx_int_t initialize_shm(ngx_shm_zone_t *zone, void *data) {
   if(data) { //zone being passed after restart
     zone->data = data;
     d = zone->data;
-    DBG("reattached shm data at %p", data);
+    ERR("reattached shm data at %p", data);
     shmtx_lock(shm);
     d->generation ++;
     d->current_active_workers = 0;
@@ -471,6 +471,16 @@ static ngx_int_t initialize_shm(ngx_shm_zone_t *zone, void *data) {
     shdata->total_active_workers = 0;
     shdata->current_active_workers = 0;
     shdata->reloading = 0;
+    
+    nchan_reaper_start(&shdata->orphan_msg_reaper, 
+                     "orphan message", 
+                     offsetof(store_message_t, prev), 
+                     offsetof(store_message_t, next), 
+    (ngx_int_t (*)(void *, uint8_t)) nchan_memstore_store_msg_ready_to_reap,
+         (void (*)(void *)) memstore_reap_store_message,
+                     2
+    );
+    
     for(i=0; i< NGX_MAX_PROCESSES; i++) {
       shdata->procslot[i]=NCHAN_INVALID_SLOT;
     }

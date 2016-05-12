@@ -2,6 +2,8 @@
 #define MEMSTORE_PRIVATE_HEADER
 
 #include "uthash.h"
+#include <util/nchan_reaper.h>
+
 typedef struct nchan_store_channel_head_s nchan_store_channel_head_t;
 typedef struct store_message_s store_message_t;
 
@@ -55,7 +57,7 @@ struct nchan_store_channel_head_s {
   unsigned                        shutting_down:1;
   unsigned                        use_redis:1;
   unsigned                        meta:1;
-
+  
   subscriber_t                   *redis_sub;
   ngx_int_t                       delta_fakesubs;
   ngx_event_t                     delta_fakesubs_timer_ev;
@@ -95,6 +97,7 @@ typedef struct {
   ngx_atomic_int_t                   current_active_workers;
   ngx_atomic_int_t                   reloading;
   ngx_atomic_uint_t                  generation;
+  nchan_reaper_t                     orphan_msg_reaper;
 #if NCHAN_MSG_LEAK_DEBUG
   nchan_msg_t                       *msgdebug_head;
 #endif

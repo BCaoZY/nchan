@@ -168,3 +168,27 @@ ngx_str_t *shm_copy_immutable_string(shmem_t *shm, ngx_str_t *str_in) {
   ngx_memcpy(str->data, str_in->data, str_in->len);
   return str;
 }
+
+ngx_int_t shm_init_mutex(ngx_shmtx_t *mutex, ngx_shmtx_sh_t *lock, char *name) {
+  u_char     *file;
+#if (NGX_HAVE_ATOMIC_OPS)
+
+  file = NULL;
+
+#else
+  ngx_str_t   mutex_name = ngx_string(name);
+  file = ngx_pnalloc(ngx_cycle->pool, ngx_cycle->lock_file.len + mutex_name.len);
+  if (file == NULL) {
+    return NGX_ERROR;
+  }
+
+  (void) ngx_sprintf(file, "%V%V%Z", &ngx_cycle->lock_file, &mutex_name);
+
+#endif
+
+  if (ngx_shmtx_create(mutex, lock, file) != NGX_OK) {
+    return NGX_ERROR;
+  }
+
+  return NGX_OK;
+}
