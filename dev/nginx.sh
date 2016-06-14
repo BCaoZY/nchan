@@ -5,7 +5,7 @@ echo $DEVDIR $SRCDIR
 
 VALGRIND_OPT=( "--tool=memcheck" "--trace-children=yes" "--track-origins=yes" "--read-var-info=yes" )
 
-VG_MEMCHECK_OPT=( "--leak-check=full" "--show-leak-kinds=all" "--leak-check-heuristics=all" "--keep-stacktraces=alloc-and-free" "--suppressions=${DEVDIR}/vg.supp" )
+VG_MEMCHECK_OPT=( "--leak-check=full" "--show-leak-kinds=definite" "--leak-check-heuristics=all" "--keep-stacktraces=alloc-and-free" "--suppressions=${DEVDIR}/vg.supp" )
 
 #expensive definedness checks (newish option)
 #VALGRIND_OPT+=( "--expensive-definedness-checks=yes" )
